@@ -31,10 +31,11 @@ func main() {
 		}
 
 		// Add a public subnet
-		publicSubnetName := "Public Subnet"
-		_, publicSubnetErr := ec2.NewSubnet(ctx, "public-subnet", &ec2.SubnetArgs{
+		publicSubnetName := "Pulumi Public Subnet"
+		publicSubnetCidr := "10.0.5.0/24"
+		publicSubnet, publicSubnetErr := ec2.NewSubnet(ctx, "public-subnet", &ec2.SubnetArgs{
 			VpcId:     vpc.ID(),
-			CidrBlock: pulumi.String("10.0.1.0/24"),
+			CidrBlock: pulumi.String(publicSubnetCidr),
 			Tags: pulumi.StringMap{
 				"Name": pulumi.String(publicSubnetName),
 			},
@@ -42,6 +43,78 @@ func main() {
 
 		if publicSubnetErr != nil {
 			return publicSubnetErr
+		}
+
+		// Add a private subnet
+		privateSubnetName := "Pulumi Private Subnet"
+		privateSubnetCidr := "10.0.6.0/24"
+		_, privateSubnetErr := ec2.NewSubnet(ctx, "private-subnet", &ec2.SubnetArgs{
+			VpcId:     vpc.ID(),
+			CidrBlock: pulumi.String(privateSubnetCidr),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(privateSubnetName),
+			},
+		})
+
+		if privateSubnetErr != nil {
+			return privateSubnetErr
+		}
+
+		// Internet Gateway
+		internetGatewayName := "Pulumi Internet Gateway"
+		internetGateway, internetGatewayErr := ec2.NewInternetGateway(ctx, "internet-gateway", &ec2.InternetGatewayArgs{
+			VpcId: vpc.ID(),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(internetGatewayName),
+			},
+		})
+
+		if internetGatewayErr != nil {
+			return internetGatewayErr
+		}
+
+		// NAT Gateway + Elastic IP
+		elasticIp, elasticIpErr := ec2.NewEip(ctx, "lb", &ec2.EipArgs{
+			Vpc: pulumi.Bool(true),
+		})
+
+		if elasticIpErr != nil {
+			return elasticIpErr
+		}
+
+		natGatewayName := "Pulumi NAT Gateway"
+		_, natGatewayErr := ec2.NewNatGateway(ctx, "nat-gateway", &ec2.NatGatewayArgs{
+			AllocationId: elasticIp.ID(),
+			SubnetId:     publicSubnet.ID(),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(natGatewayName),
+			},
+			// Explicitly declare that this NAT Gateway depends on the Internet Gateway's deployment to be completed
+		}, pulumi.DependsOn([]pulumi.Resource{
+			internetGateway,
+		}))
+
+		if natGatewayErr != nil {
+			return elasticIpErr
+		}
+
+		publicRouteTableName := "Pulumi Public Route Table"
+		publicRouteTable, publicRouteTableErr := ec2.NewRouteTable(ctx, "public-route-table", &ec2.RouteTableArgs{
+			VpcId: vpc.ID(),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(publicRouteTableName),
+			},
+		})
+
+		entireInternetCidr := "0.0.0.0/0"
+		ec2.NewRoute(ctx, "temp", &ec2.RouteArgs{
+			RouteTableId:         publicRouteTable.ID(),
+			DestinationCidrBlock: pulumi.String(entireInternetCidr),
+			GatewayId:            internetGateway.ID(),
+		})
+
+		if publicRouteTableErr != nil {
+			return publicRouteTableErr
 		}
 
 		// Export the name of the bucket
