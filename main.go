@@ -15,29 +15,22 @@ func main() {
 			return bucketErr
 		}
 
+		vpcName := "Pulumi VPC"
+
 		// VPC block
 		cidrBlock := "10.0.0.0/16"
-		vpc, vpcErr := ec2.NewVpc(ctx, "vpc", &ec2.VpcArgs{
+		_, vpcErr := ec2.NewVpc(ctx, "vpc", &ec2.VpcArgs{
 			CidrBlock: pulumi.String(cidrBlock),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(vpcName),
+			},
 		})
 
 		if vpcErr != nil {
 			return vpcErr
 		}
 
-		vpcName := "Pulumi VPC"
-
-		// Add a name tag to the VPC.
-		// @fixme, can this be added to the ec2.NewVpc constructor?
-		_, vpcNameTagErr := ec2.NewTag(ctx, "vpcNameTag", &ec2.TagArgs{
-			ResourceId: vpc.ID(),
-			Key:        pulumi.String("Name"),
-			Value:      pulumi.String(vpcName),
-		})
-
-		if vpcNameTagErr != nil {
-			return vpcNameTagErr
-		}
+		// Add a public subnet
 
 		// Export the name of the bucket
 		ctx.Export("bucketName", bucket.ID())
