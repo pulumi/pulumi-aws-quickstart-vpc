@@ -48,7 +48,7 @@ func main() {
 		// Add a private subnet
 		privateSubnetName := "Pulumi Private Subnet"
 		privateSubnetCidr := "10.0.6.0/24"
-		_, privateSubnetErr := ec2.NewSubnet(ctx, "private-subnet", &ec2.SubnetArgs{
+		privateSubnet, privateSubnetErr := ec2.NewSubnet(ctx, "private-subnet", &ec2.SubnetArgs{
 			VpcId:     vpc.ID(),
 			CidrBlock: pulumi.String(privateSubnetCidr),
 			Tags: pulumi.StringMap{
@@ -60,7 +60,9 @@ func main() {
 			return privateSubnetErr
 		}
 
-		// Internet Gateway
+		/**********************************************************
+		 * BEGIN PUBLIC SUBNET NETWORKING
+		 **********************************************************/
 		internetGatewayName := "Pulumi Internet Gateway"
 		internetGateway, internetGatewayErr := ec2.NewInternetGateway(ctx, "internet-gateway", &ec2.InternetGatewayArgs{
 			VpcId: vpc.ID(),
@@ -83,7 +85,7 @@ func main() {
 		}
 
 		natGatewayName := "Pulumi NAT Gateway"
-		_, natGatewayErr := ec2.NewNatGateway(ctx, "nat-gateway", &ec2.NatGatewayArgs{
+		natGateway, natGatewayErr := ec2.NewNatGateway(ctx, "nat-gateway", &ec2.NatGatewayArgs{
 			AllocationId: elasticIp.ID(),
 			SubnetId:     publicSubnet.ID(),
 			Tags: pulumi.StringMap{
@@ -106,15 +108,63 @@ func main() {
 			},
 		})
 
+		if publicRouteTableErr != nil {
+			return publicRouteTableErr
+		}
+
 		entireInternetCidr := "0.0.0.0/0"
-		ec2.NewRoute(ctx, "temp", &ec2.RouteArgs{
+		_, publicRouteErr := ec2.NewRoute(ctx, "public-route", &ec2.RouteArgs{
 			RouteTableId:         publicRouteTable.ID(),
 			DestinationCidrBlock: pulumi.String(entireInternetCidr),
 			GatewayId:            internetGateway.ID(),
 		})
 
-		if publicRouteTableErr != nil {
-			return publicRouteTableErr
+		if publicRouteErr != nil {
+			return publicRouteErr
+		}
+
+		_, publicRouteTableAssociationErr := ec2.NewRouteTableAssociation(ctx, "public-route-table-association", &ec2.RouteTableAssociationArgs{
+			SubnetId:     publicSubnet.ID(),
+			RouteTableId: publicRouteTable.ID(),
+		})
+
+		if publicRouteTableAssociationErr != nil {
+			return publicRouteErr
+		}
+
+		/********************************************************************
+		 * BEGIN PRIVATE SUBNET ROUTING
+		 ********************************************************************/
+
+		privateRouteTableName := "Pulumi Private Route Table"
+		privateRouteTable, privateRouteTableErr := ec2.NewRouteTable(ctx, "private-route-table", &ec2.RouteTableArgs{
+			VpcId: vpc.ID(),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(privateRouteTableName),
+			},
+		})
+
+		if privateRouteTableErr != nil {
+			return privateRouteTableErr
+		}
+
+		_, privateRouteErr := ec2.NewRoute(ctx, "private-route", &ec2.RouteArgs{
+			RouteTableId:         privateRouteTable.ID(),
+			DestinationCidrBlock: pulumi.String(entireInternetCidr),
+			NatGatewayId:         natGateway.ID(),
+		})
+
+		if privateRouteErr != nil {
+			return privateRouteErr
+		}
+
+		_, privateRouteTableAssociationErr := ec2.NewRouteTableAssociation(ctx, "private-route-table-association", &ec2.RouteTableAssociationArgs{
+			SubnetId:     privateSubnet.ID(),
+			RouteTableId: privateRouteTable.ID(),
+		})
+
+		if privateRouteTableAssociationErr != nil {
+			return privateRouteErr
 		}
 
 		// Export the name of the bucket
