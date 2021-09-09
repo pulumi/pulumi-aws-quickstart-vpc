@@ -172,7 +172,8 @@ func main() {
 		 ***********************************************************/
 		privateNetworkAclName := "Pulumi Private Network ACL"
 		_, privateNetworkAclErr := ec2.NewNetworkAcl(ctx, "private-network-acl", &ec2.NetworkAclArgs{
-			VpcId: vpc.ID(),
+			VpcId:     vpc.ID(),
+			SubnetIds: pulumi.StringArray{privateSubnet.ID()},
 			Egress: ec2.NetworkAclEgressArray{
 				ec2.NetworkAclEgressArgs{
 					Action:    pulumi.String("allow"),
