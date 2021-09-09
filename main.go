@@ -178,20 +178,24 @@ func main() {
 				ec2.NetworkAclEgressArgs{
 					Action:    pulumi.String("allow"),
 					CidrBlock: pulumi.String(entireInternetCidr),
-					Protocol:  pulumi.String("all"),
 					RuleNo:    pulumi.Int(100),
-					FromPort:  pulumi.Int(0),
-					ToPort:    pulumi.Int(0),
+
+					// Note: Protocol "all" ignores the FromPort and ToPort fields. Using "0" as placeholder.
+					Protocol: pulumi.String("all"),
+					FromPort: pulumi.Int(0),
+					ToPort:   pulumi.Int(0),
 				},
 			},
 			Ingress: ec2.NetworkAclIngressArray{
 				ec2.NetworkAclIngressArgs{
 					Action:    pulumi.String("allow"),
 					CidrBlock: pulumi.String(entireInternetCidr),
-					Protocol:  pulumi.String("all"),
 					RuleNo:    pulumi.Int(100),
-					FromPort:  pulumi.Int(0),
-					ToPort:    pulumi.Int(0),
+
+					// Note: Protocol "all" ignores the FromPort and ToPort fields. Using "0" as placeholder.
+					Protocol: pulumi.String("all"),
+					FromPort: pulumi.Int(0),
+					ToPort:   pulumi.Int(0),
 				},
 			},
 			Tags: pulumi.StringMap{
