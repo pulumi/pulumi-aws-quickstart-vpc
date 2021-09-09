@@ -164,7 +164,43 @@ func main() {
 		})
 
 		if privateRouteTableAssociationErr != nil {
-			return privateRouteErr
+			return privateRouteTableAssociationErr
+		}
+
+		/***********************************************************
+		 * Begin Private Network ACL
+		 ***********************************************************/
+		privateNetworkAclName := "Pulumi Private Network ACL"
+		_, privateNetworkAclErr := ec2.NewNetworkAcl(ctx, "private-network-acl", &ec2.NetworkAclArgs{
+			VpcId: vpc.ID(),
+			Egress: ec2.NetworkAclEgressArray{
+				ec2.NetworkAclEgressArgs{
+					Action:    pulumi.String("allow"),
+					CidrBlock: pulumi.String(entireInternetCidr),
+					Protocol:  pulumi.String("all"),
+					RuleNo:    pulumi.Int(100),
+					FromPort:  pulumi.Int(0),
+					ToPort:    pulumi.Int(0),
+				},
+			},
+			Ingress: ec2.NetworkAclIngressArray{
+				ec2.NetworkAclIngressArgs{
+					Action:    pulumi.String("allow"),
+					CidrBlock: pulumi.String(entireInternetCidr),
+					Protocol:  pulumi.String("all"),
+					RuleNo:    pulumi.Int(100),
+					FromPort:  pulumi.Int(0),
+					ToPort:    pulumi.Int(0),
+				},
+			},
+			Tags: pulumi.StringMap{
+				"Name":    pulumi.String(privateNetworkAclName),
+				"Network": pulumi.String("NACL Protected"),
+			},
+		})
+
+		if privateNetworkAclErr != nil {
+			return privateNetworkAclErr
 		}
 
 		// Export the name of the bucket
