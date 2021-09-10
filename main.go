@@ -11,9 +11,13 @@ func main() {
 
 		namespace := "pulumi-vpc"
 
+		// @fixme - not implemented yet. The main challenge is the false choice.
 		// createPublicSubnets := true
+
 		createPrivateSubnets := true
-		// createAdditionalPrivateSubnets := true
+		createAdditionalPrivateSubnets := true
+
+		// @fixme - not implemented yet. The main challenge is actually the "false" choice.
 		// createNatGateways := true
 
 		// VPC block
@@ -47,33 +51,41 @@ func main() {
 		publicSubnet1Cidr := "10.0.5.0/24" // Add a public subnet
 		privateSubnet1AName := "Pulumi Private Subnet 1A"
 		privateSubnet1ACidr := "10.0.7.0/24"
+		privateSubnet1BName := "Pulumi Private Subnet 1B"
+		privateSubnet1BCidr := "10.0.14.0/24"
 
 		publicSubnet2Name := "Pulumi Public Subnet 2"
 		publicSubnet2Cidr := "10.0.8.0/24"
 		privateSubnet2AName := "Pulumi Private Subnet 2A"
 		privateSubnet2ACidr := "10.0.9.0/24"
+		privateSubnet2BName := "Pulumi Private Subnet 1A"
+		privateSubnet2BCidr := "10.0.15.0/24"
 
 		publicSubnet3Name := "Pulumi Public Subnet 3"
 		publicSubnet3Cidr := "10.0.10.0/24"
 		privateSubnet3AName := "Pulumi Private Subnet 3A"
 		privateSubnet3ACidr := "10.0.11.0/24"
+		privateSubnet3BName := "Pulumi Private Subnet 3B"
+		privateSubnet3BCidr := "10.0.16.0/24"
 
 		publicSubnet4Name := "Pulumi Public Subnet 4"
 		publicSubnet4Cidr := "10.0.12.0/24"
 		privateSubnet4AName := "Pulumi Private Subnet 4A"
 		privateSubnet4ACidr := "10.0.13.0/24"
+		privateSubnet4BName := "Pulumi Private Subnet 4B"
+		privateSubnet4BCidr := "10.0.17.0/24"
 
 		// Item 1
-		createPublicPrivateSubnets(ctx, namespace+"1", vpc, publicSubnet1Cidr, publicSubnet1Name, internetGateway, privateSubnet1ACidr, privateSubnet1AName, createPrivateSubnets)
+		createPublicPrivateSubnets(ctx, namespace+"1", vpc, publicSubnet1Cidr, publicSubnet1Name, internetGateway, privateSubnet1ACidr, privateSubnet1AName, privateSubnet1BCidr, privateSubnet1BName, createPrivateSubnets, createAdditionalPrivateSubnets)
 
 		// Item 2
-		createPublicPrivateSubnets(ctx, namespace+"2", vpc, publicSubnet2Cidr, publicSubnet2Name, internetGateway, privateSubnet2ACidr, privateSubnet2AName, createPrivateSubnets)
+		createPublicPrivateSubnets(ctx, namespace+"2", vpc, publicSubnet2Cidr, publicSubnet2Name, internetGateway, privateSubnet2ACidr, privateSubnet2AName, privateSubnet2BCidr, privateSubnet2BName, createPrivateSubnets, createAdditionalPrivateSubnets)
 
 		// // Item 1
-		createPublicPrivateSubnets(ctx, namespace+"3", vpc, publicSubnet3Cidr, publicSubnet3Name, internetGateway, privateSubnet3ACidr, privateSubnet3AName, createPrivateSubnets)
+		createPublicPrivateSubnets(ctx, namespace+"3", vpc, publicSubnet3Cidr, publicSubnet3Name, internetGateway, privateSubnet3ACidr, privateSubnet3AName, privateSubnet3BCidr, privateSubnet3BName, createPrivateSubnets, createAdditionalPrivateSubnets)
 
 		// // Item 2
-		createPublicPrivateSubnets(ctx, namespace+"4", vpc, publicSubnet4Cidr, publicSubnet4Name, internetGateway, privateSubnet4ACidr, privateSubnet4AName, createPrivateSubnets)
+		createPublicPrivateSubnets(ctx, namespace+"4", vpc, publicSubnet4Cidr, publicSubnet4Name, internetGateway, privateSubnet4ACidr, privateSubnet4AName, privateSubnet4BCidr, privateSubnet4BName, createPrivateSubnets, createAdditionalPrivateSubnets)
 
 		return nil
 	})
@@ -254,7 +266,7 @@ func createPrivateSubnet(ctx *pulumi.Context, namespace string, subnetCidr strin
 	return nil
 }
 
-func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.Vpc, publicSubnetCidr string, publicSubnetName string, internetGateway *ec2.InternetGateway, privateSubnetCidr string, privateSubnetName string, withPrivateSubnet bool) error {
+func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.Vpc, publicSubnetCidr string, publicSubnetName string, internetGateway *ec2.InternetGateway, privateSubnetCidr string, privateSubnetName string, privateSubnetBCidr string, privateSubnetBName string, withPrivateSubnet bool, withAdditionalPrivateSubnet bool) error {
 	natGateway, createPublicSubnetErr := createPublicSubnet(ctx, resourceId(namespace, "public"), publicSubnetCidr, publicSubnetName, vpc, internetGateway)
 
 	if createPublicSubnetErr != nil {
@@ -268,6 +280,14 @@ func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.
 			return createPrivateSubnetErr
 		}
 
+	}
+
+	if withAdditionalPrivateSubnet {
+		createAdditionalPrivateSubnetErr := createPrivateSubnet(ctx, resourceId(namespace, "privateB"), privateSubnetBCidr, resourceName(namespace, privateSubnetBName), vpc, natGateway)
+
+		if createAdditionalPrivateSubnetErr != nil {
+			return createAdditionalPrivateSubnetErr
+		}
 	}
 
 	return nil
