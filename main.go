@@ -1,9 +1,21 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ec2"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
+
+type AvailabilityZoneConfig struct {
+	publicSubnetName   string
+	availabilityZone   string
+	publicSubnetCidr   string
+	privateSubnetAName string
+	privateSubnetACidr string
+	privateSubnetBName string
+	privateSubnetBCidr string
+}
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
@@ -21,47 +33,57 @@ func main() {
 		// default || dedicated
 		vpcInstanceTenancy := "default"
 
-		// @fixme - not implemented yet. The main challenge is the false choice.
 		createPublicSubnets := true
 		createPrivateSubnets := true
-		createAdditionalPrivateSubnets := true
-
-		// @fixme - not implemented yet. The main challenge is actually the "false" choice.
+		createAdditionalPrivateSubnets := false
 		createNatGateways := false
 
 		// VPC block
 		vpcCidrBlock := "10.0.0.0/16"
 
-		// Add a public subnet
-		publicSubnet1Name := "Pulumi Public Subnet 1"
-		publicSubnet1Cidr := "10.0.5.0/24" // Add a public subnet
-		privateSubnet1AName := "Pulumi Private Subnet 1A"
-		privateSubnet1ACidr := "10.0.7.0/24"
-		privateSubnet1BName := "Pulumi Private Subnet 1B"
-		privateSubnet1BCidr := "10.0.224.0/21"
-
-		publicSubnet2Name := "Pulumi Public Subnet 2"
-		publicSubnet2Cidr := "10.0.8.0/24"
-		privateSubnet2AName := "Pulumi Private Subnet 2A"
-		privateSubnet2ACidr := "10.0.9.0/24"
-		privateSubnet2BName := "Pulumi Private Subnet 1A"
-		privateSubnet2BCidr := "10.0.232.0/21"
-
-		publicSubnet3Name := "Pulumi Public Subnet 3"
-		publicSubnet3Cidr := "10.0.10.0/24"
-		privateSubnet3AName := "Pulumi Private Subnet 3A"
-		privateSubnet3ACidr := "10.0.11.0/24"
-		privateSubnet3BName := "Pulumi Private Subnet 3B"
-		privateSubnet3BCidr := "10.0.240.0/21"
-
-		publicSubnet4Name := "Pulumi Public Subnet 4"
-		publicSubnet4Cidr := "10.0.12.0/24"
-		privateSubnet4AName := "Pulumi Private Subnet 4A"
-		privateSubnet4ACidr := "10.0.13.0/24"
-		privateSubnet4BName := "Pulumi Private Subnet 4B"
-		privateSubnet4BCidr := "10.0.216.0/21"
+		availabilityZoneConfigs := [4]AvailabilityZoneConfig{
+			{
+				publicSubnetName:   "Pulumi Public Subnet 1",
+				availabilityZone:   "us-east-1a",
+				publicSubnetCidr:   "10.0.5.0/24",
+				privateSubnetAName: "Pulumi Private Subnet 1A",
+				privateSubnetACidr: "10.0.7.0/24",
+				privateSubnetBName: "Pulumi Private Subnet 1B",
+				privateSubnetBCidr: "10.0.224.0/21",
+			},
+			{
+				publicSubnetName:   "Pulumi Public Subnet 2",
+				availabilityZone:   "us-east-1b",
+				publicSubnetCidr:   "10.0.8.0/24",
+				privateSubnetAName: "Pulumi Private Subnet 2A",
+				privateSubnetACidr: "10.0.9.0/24",
+				privateSubnetBName: "Pulumi Private Subnet 2B",
+				privateSubnetBCidr: "10.0.232.0/21",
+			},
+			{
+				publicSubnetName:   "Pulumi Public Subnet 3",
+				availabilityZone:   "us-east-1c",
+				publicSubnetCidr:   "10.0.10.0/24",
+				privateSubnetAName: "Pulumi Private Subnet 3A",
+				privateSubnetACidr: "10.0.11.0/24",
+				privateSubnetBName: "Pulumi Private Subnet 3B",
+				privateSubnetBCidr: "10.0.240.0/21",
+			},
+			{
+				publicSubnetName:   "Pulumi Public Subnet 4",
+				availabilityZone:   "us-east-1d",
+				publicSubnetCidr:   "10.0.12.0/24",
+				privateSubnetAName: "Pulumi Private Subnet 4A",
+				privateSubnetACidr: "10.0.13.0/24",
+				privateSubnetBName: "Pulumi Private Subnet 4B",
+				privateSubnetBCidr: "10.0.216.0/21",
+			},
+		}
 
 		// END PARAMETERS
+
+		// @fixme- the quickstart has a dhcp options, is that necessary?
+		// https://github.com/aws-quickstart/quickstart-aws-vpc/blob/ffc7af4e59a09dbf52199a3ecf70f3805abeff48/templates/aws-vpc.template.yaml#L457
 
 		vpc, vpcErr := ec2.NewVpc(ctx, "vpc", &ec2.VpcArgs{
 			CidrBlock:          pulumi.String(vpcCidrBlock),
@@ -90,17 +112,9 @@ func main() {
 			return internetGatewayErr
 		}
 
-		// Item 1
-		createPublicPrivateSubnets(ctx, namespace+"1", vpc, publicSubnet1Cidr, publicSubnet1Name, internetGateway, privateSubnet1ACidr, privateSubnet1AName, privateSubnet1BCidr, privateSubnet1BName, createPublicSubnets, createPrivateSubnets, createAdditionalPrivateSubnets, createNatGateways)
-
-		// Item 2
-		createPublicPrivateSubnets(ctx, namespace+"2", vpc, publicSubnet2Cidr, publicSubnet2Name, internetGateway, privateSubnet2ACidr, privateSubnet2AName, privateSubnet2BCidr, privateSubnet2BName, createPrivateSubnets, createPrivateSubnets, createAdditionalPrivateSubnets, createNatGateways)
-
-		// Item 3
-		createPublicPrivateSubnets(ctx, namespace+"3", vpc, publicSubnet3Cidr, publicSubnet3Name, internetGateway, privateSubnet3ACidr, privateSubnet3AName, privateSubnet3BCidr, privateSubnet3BName, createPrivateSubnets, createPrivateSubnets, createAdditionalPrivateSubnets, createNatGateways)
-
-		// Item 4
-		createPublicPrivateSubnets(ctx, namespace+"4", vpc, publicSubnet4Cidr, publicSubnet4Name, internetGateway, privateSubnet4ACidr, privateSubnet4AName, privateSubnet4BCidr, privateSubnet4BName, createPrivateSubnets, createPrivateSubnets, createAdditionalPrivateSubnets, createNatGateways)
+		for idx, s := range availabilityZoneConfigs {
+			createPublicPrivateSubnets(ctx, fmt.Sprintf("%s%s%d", namespace, "-az", idx), vpc, internetGateway, s, createPublicSubnets, createPrivateSubnets, createAdditionalPrivateSubnets, createNatGateways)
+		}
 
 		return nil
 	})
@@ -115,15 +129,16 @@ func resourceName(namespace string, resourceName string) string {
 }
 
 // @fixme - this function includes a "DependsOn block" for the internet gateway
-func createPublicSubnet(ctx *pulumi.Context, namespace string, subnetCidr string, subnetName string, vpc *ec2.Vpc, internetGateway *ec2.InternetGateway, createNatGateways bool) (*ec2.NatGateway, error) {
+func createPublicSubnet(ctx *pulumi.Context, namespace string, subnetCidr string, subnetName string, availabilityZone string, vpc *ec2.Vpc, internetGateway *ec2.InternetGateway, createNatGateways bool) (*ec2.NatGateway, error) {
 	natGatewayName := resourceName(namespace, "Pulumi NAT Gateway")
 	publicRouteTableName := resourceName(namespace, "Pulumi Public Route Table")
 
 	entireInternetCidr := "0.0.0.0/0"
 
 	publicSubnet, publicSubnetErr := ec2.NewSubnet(ctx, resourceId(namespace, "public-subnet"), &ec2.SubnetArgs{
-		VpcId:     vpc.ID(),
-		CidrBlock: pulumi.String(subnetCidr),
+		VpcId:            vpc.ID(),
+		CidrBlock:        pulumi.String(subnetCidr),
+		AvailabilityZone: pulumi.String(availabilityZone),
 		Tags: pulumi.StringMap{
 			"Name": pulumi.String(subnetName),
 		},
@@ -196,12 +211,13 @@ func createPublicSubnet(ctx *pulumi.Context, namespace string, subnetCidr string
 	return nil, nil
 }
 
-func createPrivateSubnet(ctx *pulumi.Context, namespace string, subnetCidr string, subnetName string, vpc *ec2.Vpc, natGateway *ec2.NatGateway) error {
+func createPrivateSubnet(ctx *pulumi.Context, namespace string, subnetCidr string, subnetName string, availabilityZone string, vpc *ec2.Vpc, natGateway *ec2.NatGateway, withNetworkAcl bool) error {
 	entireInternetCidr := "0.0.0.0/0"
 
 	privateSubnet, privateSubnetErr := ec2.NewSubnet(ctx, resourceId(namespace, "private-subnet"), &ec2.SubnetArgs{
-		VpcId:     vpc.ID(),
-		CidrBlock: pulumi.String(subnetCidr),
+		VpcId:            vpc.ID(),
+		CidrBlock:        pulumi.String(subnetCidr),
+		AvailabilityZone: pulumi.String(availabilityZone),
 		Tags: pulumi.StringMap{
 			"Name": pulumi.String(subnetName),
 		},
@@ -247,54 +263,57 @@ func createPrivateSubnet(ctx *pulumi.Context, namespace string, subnetCidr strin
 	/***********************************************************
 	 * Begin Private Network ACL
 	 ***********************************************************/
-	privateNetworkAclName := resourceName(namespace, "Pulumi Private Network ACL")
-	_, privateNetworkAclErr := ec2.NewNetworkAcl(ctx, resourceId(namespace, "private-network-acl"), &ec2.NetworkAclArgs{
-		VpcId:     vpc.ID(),
-		SubnetIds: pulumi.StringArray{privateSubnet.ID()},
-		Egress: ec2.NetworkAclEgressArray{
-			ec2.NetworkAclEgressArgs{
-				Action:    pulumi.String("allow"),
-				CidrBlock: pulumi.String(entireInternetCidr),
-				RuleNo:    pulumi.Int(100),
+	if withNetworkAcl {
+		privateNetworkAclName := resourceName(namespace, "Pulumi Private Network ACL")
+		_, privateNetworkAclErr := ec2.NewNetworkAcl(ctx, resourceId(namespace, "private-network-acl"), &ec2.NetworkAclArgs{
+			VpcId:     vpc.ID(),
+			SubnetIds: pulumi.StringArray{privateSubnet.ID()},
+			Egress: ec2.NetworkAclEgressArray{
+				ec2.NetworkAclEgressArgs{
+					Action:    pulumi.String("allow"),
+					CidrBlock: pulumi.String(entireInternetCidr),
+					RuleNo:    pulumi.Int(100),
 
-				// Note: Protocol "all" ignores the FromPort and ToPort fields. Using "0" as placeholder.
-				Protocol: pulumi.String("all"),
-				FromPort: pulumi.Int(0),
-				ToPort:   pulumi.Int(0),
+					// Note: Protocol "all" ignores the FromPort and ToPort fields. Using "0" as placeholder.
+					Protocol: pulumi.String("all"),
+					FromPort: pulumi.Int(0),
+					ToPort:   pulumi.Int(0),
+				},
 			},
-		},
-		Ingress: ec2.NetworkAclIngressArray{
-			ec2.NetworkAclIngressArgs{
-				Action:    pulumi.String("allow"),
-				CidrBlock: pulumi.String(entireInternetCidr),
-				RuleNo:    pulumi.Int(100),
+			Ingress: ec2.NetworkAclIngressArray{
+				ec2.NetworkAclIngressArgs{
+					Action:    pulumi.String("allow"),
+					CidrBlock: pulumi.String(entireInternetCidr),
+					RuleNo:    pulumi.Int(100),
 
-				// Note: Protocol "all" ignores the FromPort and ToPort fields. Using "0" as placeholder.
-				Protocol: pulumi.String("all"),
-				FromPort: pulumi.Int(0),
-				ToPort:   pulumi.Int(0),
+					// Note: Protocol "all" ignores the FromPort and ToPort fields. Using "0" as placeholder.
+					Protocol: pulumi.String("all"),
+					FromPort: pulumi.Int(0),
+					ToPort:   pulumi.Int(0),
+				},
 			},
-		},
-		Tags: pulumi.StringMap{
-			"Name":    pulumi.String(privateNetworkAclName),
-			"Network": pulumi.String("NACL Protected"),
-		},
-	})
+			Tags: pulumi.StringMap{
+				"Name":    pulumi.String(privateNetworkAclName),
+				"Network": pulumi.String("NACL Protected"),
+			},
+		})
 
-	if privateNetworkAclErr != nil {
-		return privateNetworkAclErr
+		if privateNetworkAclErr != nil {
+			return privateNetworkAclErr
+		}
 	}
 
 	return nil
 }
 
-func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.Vpc, publicSubnetCidr string, publicSubnetName string, internetGateway *ec2.InternetGateway, privateSubnetCidr string, privateSubnetName string, privateSubnetBCidr string, privateSubnetBName string, withPublicSubnet bool, withPrivateSubnet bool, withAdditionalPrivateSubnet bool, createNatGateways bool) error {
+// func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.Vpc, availabilityZone string, publicSubnetCidr string, publicSubnetName string, internetGateway *ec2.InternetGateway, privateSubnetCidr string, privateSubnetName string, privateSubnetBCidr string, privateSubnetBName string, withPublicSubnet bool, withPrivateSubnet bool, withAdditionalPrivateSubnet bool, createNatGateways bool) error {
+func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.Vpc, internetGateway *ec2.InternetGateway, config AvailabilityZoneConfig, withPublicSubnet bool, withPrivateSubnet bool, withAdditionalPrivateSubnet bool, createNatGateways bool) error {
 
 	var natGateway *ec2.NatGateway = nil
 
 	if withPublicSubnet {
 		var createPublicSubnetErr error = nil
-		natGateway, createPublicSubnetErr = createPublicSubnet(ctx, resourceId(namespace, "public"), publicSubnetCidr, publicSubnetName, vpc, internetGateway, createNatGateways)
+		natGateway, createPublicSubnetErr = createPublicSubnet(ctx, resourceId(namespace, "public"), config.publicSubnetCidr, resourceName(namespace, config.publicSubnetName), config.availabilityZone, vpc, internetGateway, createNatGateways)
 
 		if createPublicSubnetErr != nil {
 			return createPublicSubnetErr
@@ -302,7 +321,7 @@ func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.
 	}
 
 	if withPrivateSubnet {
-		createPrivateSubnetErr := createPrivateSubnet(ctx, resourceId(namespace, "privateA"), privateSubnetCidr, resourceName(namespace, privateSubnetName), vpc, natGateway)
+		createPrivateSubnetErr := createPrivateSubnet(ctx, resourceId(namespace, "privateA"), config.privateSubnetACidr, resourceName(namespace, config.privateSubnetAName), config.availabilityZone, vpc, natGateway, false)
 
 		if createPrivateSubnetErr != nil {
 			return createPrivateSubnetErr
@@ -311,7 +330,7 @@ func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.
 	}
 
 	if withAdditionalPrivateSubnet {
-		createAdditionalPrivateSubnetErr := createPrivateSubnet(ctx, resourceId(namespace, "privateB"), privateSubnetBCidr, resourceName(namespace, privateSubnetBName), vpc, natGateway)
+		createAdditionalPrivateSubnetErr := createPrivateSubnet(ctx, resourceId(namespace, "privateB"), config.privateSubnetBCidr, resourceName(namespace, config.privateSubnetBName), config.availabilityZone, vpc, natGateway, true)
 
 		if createAdditionalPrivateSubnetErr != nil {
 			return createAdditionalPrivateSubnetErr
