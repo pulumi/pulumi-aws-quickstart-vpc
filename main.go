@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/cloudwatch"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ec2"
+	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
+
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
@@ -36,12 +40,12 @@ func main() {
 		createPublicSubnets := true
 		createPrivateSubnets := true
 		createAdditionalPrivateSubnets := false
-		createNatGateways := false
+		createNatGateways := true
 
 		// VPC block
 		vpcCidrBlock := "10.0.0.0/16"
 
-		availabilityZoneConfigs := [4]AvailabilityZoneConfig{
+		availabilityZoneConfigs := []AvailabilityZoneConfig{
 			{
 				publicSubnetName:   "Pulumi Public Subnet 1",
 				availabilityZone:   "us-east-1a",
@@ -60,24 +64,24 @@ func main() {
 				privateSubnetBName: "Pulumi Private Subnet 2B",
 				privateSubnetBCidr: "10.0.232.0/21",
 			},
-			{
-				publicSubnetName:   "Pulumi Public Subnet 3",
-				availabilityZone:   "us-east-1c",
-				publicSubnetCidr:   "10.0.10.0/24",
-				privateSubnetAName: "Pulumi Private Subnet 3A",
-				privateSubnetACidr: "10.0.11.0/24",
-				privateSubnetBName: "Pulumi Private Subnet 3B",
-				privateSubnetBCidr: "10.0.240.0/21",
-			},
-			{
-				publicSubnetName:   "Pulumi Public Subnet 4",
-				availabilityZone:   "us-east-1d",
-				publicSubnetCidr:   "10.0.12.0/24",
-				privateSubnetAName: "Pulumi Private Subnet 4A",
-				privateSubnetACidr: "10.0.13.0/24",
-				privateSubnetBName: "Pulumi Private Subnet 4B",
-				privateSubnetBCidr: "10.0.216.0/21",
-			},
+			// {
+			// 	publicSubnetName:   "Pulumi Public Subnet 3",
+			// 	availabilityZone:   "us-east-1c",
+			// 	publicSubnetCidr:   "10.0.10.0/24",
+			// 	privateSubnetAName: "Pulumi Private Subnet 3A",
+			// 	privateSubnetACidr: "10.0.11.0/24",
+			// 	privateSubnetBName: "Pulumi Private Subnet 3B",
+			// 	privateSubnetBCidr: "10.0.240.0/21",
+			// },
+			// {
+			// 	publicSubnetName:   "Pulumi Public Subnet 4",
+			// 	availabilityZone:   "us-east-1d",
+			// 	publicSubnetCidr:   "10.0.12.0/24",
+			// 	privateSubnetAName: "Pulumi Private Subnet 4A",
+			// 	privateSubnetACidr: "10.0.13.0/24",
+			// 	privateSubnetBName: "Pulumi Private Subnet 4B",
+			// 	privateSubnetBCidr: "10.0.216.0/21",
+			// },
 		}
 
 		// END PARAMETERS
@@ -99,6 +103,87 @@ func main() {
 			return vpcErr
 		}
 
+		vpcFlowLogGroup, vpcFlowLogGroupErr := cloudwatch.NewLogGroup(ctx, resourceName(namespace, "vpc-flow-log-group"), &cloudwatch.LogGroupArgs{
+			Name: pulumi.String(namespace + "-flow-logs"),
+		})
+		if vpcFlowLogGroupErr != nil {
+			return vpcFlowLogGroupErr
+		}
+
+		assumeRolePolicyString, assumeRolePolicyStringErr := json.Marshal(
+			map[string]interface{}{
+				"Version": "2012-10-17",
+				"Statement": []map[string]interface{}{
+					{
+						"Action": "sts:AssumeRole",
+						"Effect": "Allow",
+						"Sid":    "",
+						"Principal": map[string]interface{}{
+							"Service": "vpc-flow-logs.amazonaws.com",
+						},
+					},
+				},
+			},
+		)
+
+		if assumeRolePolicyStringErr != nil {
+			return assumeRolePolicyStringErr
+		}
+
+		vpcFlowLogRole, vpcFlowLogRoleErr := iam.NewRole(ctx, resourceName(namespace, "vpc-flow-log-role"), &iam.RoleArgs{
+			Name:             pulumi.String(namespace + "-vpc-flow-log-role"),
+			AssumeRolePolicy: pulumi.String(string(assumeRolePolicyString)),
+		})
+
+		if vpcFlowLogRoleErr != nil {
+			return vpcFlowLogRoleErr
+		}
+
+		policyStatement, policyStatementErr := json.Marshal(
+			map[string]interface{}{
+				"Version": "2012-10-17",
+				"Statement": []map[string]interface{}{
+					{
+						"Action": []string{
+							"logs:CreateLogGroup",
+							"logs:CreateLogStream",
+							"logs:PutLogEvents",
+							"logs:DescribeLogGroups",
+							"logs:DescribeLogStreams",
+						},
+						"Effect": "Allow",
+						// @fixme - could restrict this to just the target vpcFlowLogGroup
+						"Resource": "*",
+					},
+				},
+			},
+		)
+
+		if policyStatementErr != nil {
+			return policyStatementErr
+		}
+
+		_, vpcFlowLogRolePolicyErr := iam.NewRolePolicy(ctx, resourceName(namespace, "vpc-flow-log-policy"), &iam.RolePolicyArgs{
+			Name:   pulumi.String(namespace + "-vpc-flow-log-policy"),
+			Role:   vpcFlowLogRole,
+			Policy: pulumi.String(string(policyStatement)),
+		})
+
+		if vpcFlowLogRolePolicyErr != nil {
+			return vpcFlowLogRolePolicyErr
+		}
+
+		_, vpcFlowLogErr := ec2.NewFlowLog(ctx, resourceName(namespace, "vpc-flow-log"), &ec2.FlowLogArgs{
+			IamRoleArn:     vpcFlowLogRole.Arn,
+			LogDestination: vpcFlowLogGroup.Arn,
+			TrafficType:    pulumi.String("ALL"),
+			VpcId:          vpc.ID(),
+		})
+
+		if vpcFlowLogErr != nil {
+			return vpcFlowLogErr
+		}
+
 		// @fixme - only create the internet gateway if public subnets are allowed.
 		internetGatewayName := "Pulumi Internet Gateway"
 		internetGateway, internetGatewayErr := ec2.NewInternetGateway(ctx, resourceName(namespace, "internet-gateway"), &ec2.InternetGatewayArgs{
@@ -112,8 +197,8 @@ func main() {
 			return internetGatewayErr
 		}
 
-		for idx, s := range availabilityZoneConfigs {
-			createPublicPrivateSubnets(ctx, fmt.Sprintf("%s%s%d", namespace, "-az", idx), vpc, internetGateway, s, createPublicSubnets, createPrivateSubnets, createAdditionalPrivateSubnets, createNatGateways)
+		for idx, availabilityZoneConfig := range availabilityZoneConfigs {
+			createPublicPrivateSubnets(ctx, fmt.Sprintf("%s%s%d", namespace, "-az", idx), vpc, internetGateway, availabilityZoneConfig, createPublicSubnets, createPrivateSubnets, createAdditionalPrivateSubnets, createNatGateways)
 		}
 
 		return nil
@@ -189,7 +274,6 @@ func createPublicSubnet(ctx *pulumi.Context, namespace string, subnetCidr string
 			return nil, elasticIpErr
 		}
 
-		// @fixme - return natGateway for the private subnet
 		natGateway, natGatewayErr := ec2.NewNatGateway(ctx, resourceId(namespace, "nat-gateway"), &ec2.NatGatewayArgs{
 			AllocationId: elasticIp.ID(),
 			SubnetId:     publicSubnet.ID(),
@@ -306,7 +390,6 @@ func createPrivateSubnet(ctx *pulumi.Context, namespace string, subnetCidr strin
 	return nil
 }
 
-// func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.Vpc, availabilityZone string, publicSubnetCidr string, publicSubnetName string, internetGateway *ec2.InternetGateway, privateSubnetCidr string, privateSubnetName string, privateSubnetBCidr string, privateSubnetBName string, withPublicSubnet bool, withPrivateSubnet bool, withAdditionalPrivateSubnet bool, createNatGateways bool) error {
 func createPublicPrivateSubnets(ctx *pulumi.Context, namespace string, vpc *ec2.Vpc, internetGateway *ec2.InternetGateway, config AvailabilityZoneConfig, withPublicSubnet bool, withPrivateSubnet bool, withAdditionalPrivateSubnet bool, createNatGateways bool) error {
 
 	var natGateway *ec2.NatGateway = nil
