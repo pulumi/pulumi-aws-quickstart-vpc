@@ -41,9 +41,12 @@ func main() {
 		createPrivateSubnets := true
 		createAdditionalPrivateSubnets := false
 		createNatGateways := true
+		createVpcFlowLogs := true
 
 		// VPC block
 		vpcCidrBlock := "10.0.0.0/16"
+
+		internetGatewayName := "Pulumi Internet Gateway"
 
 		availabilityZoneConfigs := []AvailabilityZoneConfig{
 			{
@@ -103,89 +106,91 @@ func main() {
 			return vpcErr
 		}
 
-		vpcFlowLogGroup, vpcFlowLogGroupErr := cloudwatch.NewLogGroup(ctx, resourceName(namespace, "vpc-flow-log-group"), &cloudwatch.LogGroupArgs{
-			Name: pulumi.String(namespace + "-flow-logs"),
-		})
-		if vpcFlowLogGroupErr != nil {
-			return vpcFlowLogGroupErr
-		}
+		if createVpcFlowLogs {
+			vpcFlowLogGroup, vpcFlowLogGroupErr := cloudwatch.NewLogGroup(ctx, resourceName(namespace, "vpc-flow-log-group"), &cloudwatch.LogGroupArgs{
+				Name: pulumi.String(namespace + "-flow-logs"),
+			})
 
-		assumeRolePolicyString, assumeRolePolicyStringErr := json.Marshal(
-			map[string]interface{}{
-				"Version": "2012-10-17",
-				"Statement": []map[string]interface{}{
-					{
-						"Action": "sts:AssumeRole",
-						"Effect": "Allow",
-						"Sid":    "",
-						"Principal": map[string]interface{}{
-							"Service": "vpc-flow-logs.amazonaws.com",
+			if vpcFlowLogGroupErr != nil {
+				return vpcFlowLogGroupErr
+			}
+
+			assumeRolePolicyString, assumeRolePolicyStringErr := json.Marshal(
+				map[string]interface{}{
+					"Version": "2012-10-17",
+					"Statement": []map[string]interface{}{
+						{
+							"Action": "sts:AssumeRole",
+							"Effect": "Allow",
+							"Sid":    "",
+							"Principal": map[string]interface{}{
+								"Service": "vpc-flow-logs.amazonaws.com",
+							},
 						},
 					},
 				},
-			},
-		)
+			)
 
-		if assumeRolePolicyStringErr != nil {
-			return assumeRolePolicyStringErr
-		}
+			if assumeRolePolicyStringErr != nil {
+				return assumeRolePolicyStringErr
+			}
 
-		vpcFlowLogRole, vpcFlowLogRoleErr := iam.NewRole(ctx, resourceName(namespace, "vpc-flow-log-role"), &iam.RoleArgs{
-			Name:             pulumi.String(namespace + "-vpc-flow-log-role"),
-			AssumeRolePolicy: pulumi.String(string(assumeRolePolicyString)),
-		})
+			vpcFlowLogRole, vpcFlowLogRoleErr := iam.NewRole(ctx, resourceName(namespace, "vpc-flow-log-role"), &iam.RoleArgs{
+				Name:             pulumi.String(namespace + "-vpc-flow-log-role"),
+				AssumeRolePolicy: pulumi.String(string(assumeRolePolicyString)),
+			})
 
-		if vpcFlowLogRoleErr != nil {
-			return vpcFlowLogRoleErr
-		}
+			if vpcFlowLogRoleErr != nil {
+				return vpcFlowLogRoleErr
+			}
 
-		policyStatement, policyStatementErr := json.Marshal(
-			map[string]interface{}{
-				"Version": "2012-10-17",
-				"Statement": []map[string]interface{}{
-					{
-						"Action": []string{
-							"logs:CreateLogGroup",
-							"logs:CreateLogStream",
-							"logs:PutLogEvents",
-							"logs:DescribeLogGroups",
-							"logs:DescribeLogStreams",
+			policyStatement, policyStatementErr := json.Marshal(
+				map[string]interface{}{
+					"Version": "2012-10-17",
+					"Statement": []map[string]interface{}{
+						{
+							"Action": []string{
+								"logs:CreateLogGroup",
+								"logs:CreateLogStream",
+								"logs:PutLogEvents",
+								"logs:DescribeLogGroups",
+								"logs:DescribeLogStreams",
+							},
+							"Effect": "Allow",
+							// @fixme - could restrict this to just the target vpcFlowLogGroup
+							"Resource": "*",
 						},
-						"Effect": "Allow",
-						// @fixme - could restrict this to just the target vpcFlowLogGroup
-						"Resource": "*",
 					},
 				},
-			},
-		)
+			)
 
-		if policyStatementErr != nil {
-			return policyStatementErr
-		}
+			if policyStatementErr != nil {
+				return policyStatementErr
+			}
 
-		_, vpcFlowLogRolePolicyErr := iam.NewRolePolicy(ctx, resourceName(namespace, "vpc-flow-log-policy"), &iam.RolePolicyArgs{
-			Name:   pulumi.String(namespace + "-vpc-flow-log-policy"),
-			Role:   vpcFlowLogRole,
-			Policy: pulumi.String(string(policyStatement)),
-		})
+			_, vpcFlowLogRolePolicyErr := iam.NewRolePolicy(ctx, resourceName(namespace, "vpc-flow-log-policy"), &iam.RolePolicyArgs{
+				Name:   pulumi.String(namespace + "-vpc-flow-log-policy"),
+				Role:   vpcFlowLogRole,
+				Policy: pulumi.String(string(policyStatement)),
+			})
 
-		if vpcFlowLogRolePolicyErr != nil {
-			return vpcFlowLogRolePolicyErr
-		}
+			if vpcFlowLogRolePolicyErr != nil {
+				return vpcFlowLogRolePolicyErr
+			}
 
-		_, vpcFlowLogErr := ec2.NewFlowLog(ctx, resourceName(namespace, "vpc-flow-log"), &ec2.FlowLogArgs{
-			IamRoleArn:     vpcFlowLogRole.Arn,
-			LogDestination: vpcFlowLogGroup.Arn,
-			TrafficType:    pulumi.String("ALL"),
-			VpcId:          vpc.ID(),
-		})
+			_, vpcFlowLogErr := ec2.NewFlowLog(ctx, resourceName(namespace, "vpc-flow-log"), &ec2.FlowLogArgs{
+				IamRoleArn:     vpcFlowLogRole.Arn,
+				LogDestination: vpcFlowLogGroup.Arn,
+				TrafficType:    pulumi.String("ALL"),
+				VpcId:          vpc.ID(),
+			})
 
-		if vpcFlowLogErr != nil {
-			return vpcFlowLogErr
+			if vpcFlowLogErr != nil {
+				return vpcFlowLogErr
+			}
 		}
 
 		// @fixme - only create the internet gateway if public subnets are allowed.
-		internetGatewayName := "Pulumi Internet Gateway"
 		internetGateway, internetGatewayErr := ec2.NewInternetGateway(ctx, resourceName(namespace, "internet-gateway"), &ec2.InternetGatewayArgs{
 			VpcId: vpc.ID(),
 			Tags: pulumi.StringMap{
