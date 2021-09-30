@@ -42,11 +42,18 @@ func main() {
 		createAdditionalPrivateSubnets := false
 		createNatGateways := true
 		createVpcFlowLogs := true
-
 		// VPC block
 		vpcCidrBlock := "10.0.0.0/16"
-
 		internetGatewayName := "Pulumi Internet Gateway"
+
+		/************************************
+		   * VPC Flow Logs Parameters
+			 ************************************/
+		pVpcFlowLogsLogGroupRetentionInDays := 14
+		pVpcFlowLogsMaxAggregationInterval := 60 // Can only be 60 or 600
+		pVpcFlowLogsLogFormat := "${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}"
+		pVpcFlowLogsTrafficType := "REJECT" // "ACCEPT" | "ALL" | "REJECT"
+		// pVpcFlowLogsCloudwatchKmsKey := "todo"
 
 		availabilityZoneConfigs := []AvailabilityZoneConfig{
 			{
@@ -108,7 +115,8 @@ func main() {
 
 		if createVpcFlowLogs {
 			vpcFlowLogGroup, vpcFlowLogGroupErr := cloudwatch.NewLogGroup(ctx, resourceName(namespace, "vpc-flow-log-group"), &cloudwatch.LogGroupArgs{
-				Name: pulumi.String(namespace + "-flow-logs"),
+				Name:            pulumi.String(namespace + "-flow-logs"),
+				RetentionInDays: pulumi.Int(pVpcFlowLogsLogGroupRetentionInDays),
 			})
 
 			if vpcFlowLogGroupErr != nil {
@@ -150,14 +158,13 @@ func main() {
 					"Statement": []map[string]interface{}{
 						{
 							"Action": []string{
-								"logs:CreateLogGroup",
 								"logs:CreateLogStream",
 								"logs:PutLogEvents",
 								"logs:DescribeLogGroups",
 								"logs:DescribeLogStreams",
 							},
 							"Effect": "Allow",
-							// @fixme - could restrict this to just the target vpcFlowLogGroup
+							// @fixme - could restrict this to just the target vpcFlowLogGroup. How should string concatenation be done for the ARN of type pulumi.Output?
 							"Resource": "*",
 						},
 					},
@@ -172,17 +179,21 @@ func main() {
 				Name:   pulumi.String(namespace + "-vpc-flow-log-policy"),
 				Role:   vpcFlowLogRole,
 				Policy: pulumi.String(string(policyStatement)),
-			})
+			}, pulumi.DependsOn([]pulumi.Resource{
+				vpcFlowLogRole,
+			}))
 
 			if vpcFlowLogRolePolicyErr != nil {
 				return vpcFlowLogRolePolicyErr
 			}
 
 			_, vpcFlowLogErr := ec2.NewFlowLog(ctx, resourceName(namespace, "vpc-flow-log"), &ec2.FlowLogArgs{
-				IamRoleArn:     vpcFlowLogRole.Arn,
-				LogDestination: vpcFlowLogGroup.Arn,
-				TrafficType:    pulumi.String("ALL"),
-				VpcId:          vpc.ID(),
+				IamRoleArn:             vpcFlowLogRole.Arn,
+				LogDestination:         vpcFlowLogGroup.Arn,
+				TrafficType:            pulumi.String(pVpcFlowLogsTrafficType),
+				VpcId:                  vpc.ID(),
+				LogFormat:              pulumi.String(pVpcFlowLogsLogFormat),
+				MaxAggregationInterval: pulumi.Int(pVpcFlowLogsMaxAggregationInterval),
 			})
 
 			if vpcFlowLogErr != nil {
