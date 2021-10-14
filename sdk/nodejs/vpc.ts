@@ -20,6 +20,22 @@ export class Vpc extends pulumi.ComponentResource {
         return obj['__pulumiType'] === Vpc.__pulumiType;
     }
 
+    /**
+     * The IPs of the EIPs associated with the Nat Gateways
+     */
+    public /*out*/ readonly natGatewayIPs!: pulumi.Output<string[] | undefined>;
+    /**
+     * The IDs of the Private Subnets Created
+     */
+    public /*out*/ readonly privateSubnetIDs!: pulumi.Output<string[] | undefined>;
+    /**
+     * The IDs of the Public Subnets Created
+     */
+    public /*out*/ readonly publicSubnetIDs!: pulumi.Output<string[] | undefined>;
+    /**
+     * The VPC ID
+     */
+    public /*out*/ readonly vpcID!: pulumi.Output<string>;
 
     /**
      * Create a Vpc resource with the given unique name, arguments, and options.
@@ -52,7 +68,15 @@ export class Vpc extends pulumi.ComponentResource {
             inputs["flowLogsRetentionPeriodInDays"] = args ? args.flowLogsRetentionPeriodInDays : undefined;
             inputs["flowLogsTrafficType"] = args ? args.flowLogsTrafficType : undefined;
             inputs["instanceTenancy"] = args ? args.instanceTenancy : undefined;
+            inputs["natGatewayIPs"] = undefined /*out*/;
+            inputs["privateSubnetIDs"] = undefined /*out*/;
+            inputs["publicSubnetIDs"] = undefined /*out*/;
+            inputs["vpcID"] = undefined /*out*/;
         } else {
+            inputs["natGatewayIPs"] = undefined /*out*/;
+            inputs["privateSubnetIDs"] = undefined /*out*/;
+            inputs["publicSubnetIDs"] = undefined /*out*/;
+            inputs["vpcID"] = undefined /*out*/;
         }
         if (!opts.version) {
             opts = pulumi.mergeOptions(opts, { version: utilities.getVersion()});
