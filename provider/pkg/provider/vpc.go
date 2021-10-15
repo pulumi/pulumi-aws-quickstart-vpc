@@ -283,31 +283,33 @@ func NewVpc(ctx *pulumi.Context,
 				return nil, privateSubnetErr
 			}
 
-			privateRouteTable, privateRouteTableErr := ec2.NewRouteTable(ctx, fmt.Sprintf("%s-private-route-table-%d", name, i), &ec2.RouteTableArgs{
-				VpcId: vpc.ID(),
-			}, pulumi.Parent(component))
-			if privateRouteTableErr != nil {
-				return nil, privateRouteTableErr
+			if natGateway != nil {
+				privateRouteTable, privateRouteTableErr := ec2.NewRouteTable(ctx, fmt.Sprintf("%s-private-route-table-%d", name, i), &ec2.RouteTableArgs{
+					VpcId: vpc.ID(),
+				}, pulumi.Parent(component))
+				if privateRouteTableErr != nil {
+					return nil, privateRouteTableErr
+				}
+
+				_, privateRouteErr := ec2.NewRoute(ctx, fmt.Sprintf("%s-private-route-%d", name, i), &ec2.RouteArgs{
+					RouteTableId:         privateRouteTable.ID(),
+					DestinationCidrBlock: pulumi.String("0.0.0.0/0"),
+					NatGatewayId:         natGateway.ID(),
+				}, pulumi.Parent(component))
+				if privateRouteErr != nil {
+					return nil, privateRouteErr
+				}
+
+				_, privateRouteTableAssociationErr := ec2.NewRouteTableAssociation(ctx, fmt.Sprintf("%s-private-route-table-association-%d", name, i), &ec2.RouteTableAssociationArgs{
+					SubnetId:     privateSubnet.ID(),
+					RouteTableId: privateRouteTable.ID(),
+				}, pulumi.Parent(component))
+				if privateRouteTableAssociationErr != nil {
+					return nil, privateRouteTableAssociationErr
+				}
 			}
 
-			_, privateRouteErr := ec2.NewRoute(ctx, fmt.Sprintf("%s-private-route-%d", name, i), &ec2.RouteArgs{
-				RouteTableId:         privateRouteTable.ID(),
-				DestinationCidrBlock: pulumi.String("0.0.0.0/0"),
-				NatGatewayId:         natGateway.ID(),
-			}, pulumi.Parent(component))
-			if privateRouteErr != nil {
-				return nil, privateRouteErr
-			}
-
-			_, privateRouteTableAssociationErr := ec2.NewRouteTableAssociation(ctx, fmt.Sprintf("%s-private-route-table-association-%d", name, i), &ec2.RouteTableAssociationArgs{
-				SubnetId:     privateSubnet.ID(),
-				RouteTableId: privateRouteTable.ID(),
-			}, pulumi.Parent(component))
-			if privateRouteTableAssociationErr != nil {
-				return nil, privateRouteTableAssociationErr
-			}
-
-			privateSubnetIds = append(publicSubnetIds, privateSubnet.ID().ToStringOutput())
+			privateSubnetIds = append(privateSubnetIds, privateSubnet.ID().ToStringOutput())
 		}
 
 		if createAdditionalPrivateSubnets && az.AvailabilityZone != "" && az.PrivateSubnetBCidr != "" {
@@ -347,7 +349,7 @@ func NewVpc(ctx *pulumi.Context,
 			if privateNetworkAclErr != nil {
 				return nil, privateNetworkAclErr
 			}
-			privateSubnetIds = append(publicSubnetIds, privateSubnet.ID().ToStringOutput())
+			privateSubnetIds = append(privateSubnetIds, privateSubnet.ID().ToStringOutput())
 		}
 	}
 
