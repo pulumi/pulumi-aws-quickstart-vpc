@@ -9,6 +9,7 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/cloudwatch"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/ec2"
 	"github.com/pulumi/pulumi-aws/sdk/v4/go/aws/iam"
@@ -41,6 +42,11 @@ type VpcArgs struct {
 
 type Vpc struct {
 	pulumi.ResourceState
+
+	VpcID            pulumi.StringOutput      `pulumi:"vpcID"`
+	PrivateSubnetIDs pulumi.StringArrayOutput `pulumi:"privateSubnetIDs"`
+	PublicSubnetIDs  pulumi.StringArrayOutput `pulumi:"publicSubnetIDs"`
+	NatGatewayIPs    pulumi.StringArrayOutput `pulumi:"natGatewayIPs"`
 }
 
 func NewVpc(ctx *pulumi.Context,
@@ -75,7 +81,7 @@ func NewVpc(ctx *pulumi.Context,
 		InstanceTenancy:    pulumi.String(instanceTenancy),
 		EnableDnsHostnames: pulumi.Bool(vpcEnableDnsHostnames),
 		EnableDnsSupport:   pulumi.Bool(vpcEnableDnsSupport),
-	})
+	}, pulumi.Parent(component))
 	if vpcErr != nil {
 		return nil, vpcErr
 	}
@@ -90,9 +96,9 @@ func NewVpc(ctx *pulumi.Context,
 		if args.FlowLogsRetentionPeriodInDays > 0 {
 			flowLogsRetentionPeriodInDays = args.FlowLogsRetentionPeriodInDays
 		}
-		vpcFlowLogGroup, vpcFlowLogGroupErr := cloudwatch.NewLogGroup(ctx, fmt.Sprintf("%s-flow-logs"), &cloudwatch.LogGroupArgs{
+		vpcFlowLogGroup, vpcFlowLogGroupErr := cloudwatch.NewLogGroup(ctx, fmt.Sprintf("%s-flow-logs", name), &cloudwatch.LogGroupArgs{
 			RetentionInDays: pulumi.Int(flowLogsRetentionPeriodInDays),
-		})
+		}, pulumi.Parent(component))
 		if vpcFlowLogGroupErr != nil {
 			return nil, vpcFlowLogGroupErr
 		}
@@ -118,7 +124,7 @@ func NewVpc(ctx *pulumi.Context,
 
 		vpcFlowLogRole, vpcFlowLogRoleErr := iam.NewRole(ctx, fmt.Sprintf("%s-vpc-flow-log-role", name), &iam.RoleArgs{
 			AssumeRolePolicy: pulumi.String(assumeRolePolicyString),
-		})
+		}, pulumi.Parent(component))
 		if vpcFlowLogRoleErr != nil {
 			return nil, vpcFlowLogRoleErr
 		}
@@ -147,7 +153,7 @@ func NewVpc(ctx *pulumi.Context,
 		_, vpcFlowLogRolePolicyErr := iam.NewRolePolicy(ctx, fmt.Sprintf("%s-vpc-flow-log-policy", name), &iam.RolePolicyArgs{
 			Role:   vpcFlowLogRole,
 			Policy: pulumi.String(policyStatement),
-		})
+		}, pulumi.Parent(component))
 		if vpcFlowLogRolePolicyErr != nil {
 			return nil, vpcFlowLogRolePolicyErr
 		}
@@ -162,7 +168,7 @@ func NewVpc(ctx *pulumi.Context,
 			flowLogsLogFormat = args.FlowLogsLogFormat
 		}
 
-		flowLogsMaxAggregationInterval := 14
+		flowLogsMaxAggregationInterval := 600
 		if args.FlowLogsMaxAggregationInterval > 0 {
 			flowLogsMaxAggregationInterval = args.FlowLogsMaxAggregationInterval
 		}
@@ -174,7 +180,7 @@ func NewVpc(ctx *pulumi.Context,
 			VpcId:                  vpc.ID(),
 			LogFormat:              pulumi.String(flowLogsLogFormat),
 			MaxAggregationInterval: pulumi.Int(flowLogsMaxAggregationInterval),
-		})
+		}, pulumi.Parent(component))
 		if vpcFlowLogErr != nil {
 			return nil, vpcFlowLogErr
 		}
@@ -183,7 +189,7 @@ func NewVpc(ctx *pulumi.Context,
 
 	internetGateway, internetGatewayErr := ec2.NewInternetGateway(ctx, fmt.Sprintf("%s-internet-gateway", name), &ec2.InternetGatewayArgs{
 		VpcId: vpc.ID(),
-	})
+	}, pulumi.Parent(component))
 	if internetGatewayErr != nil {
 		return nil, internetGatewayErr
 	}
@@ -204,6 +210,10 @@ func NewVpc(ctx *pulumi.Context,
 	if args.CreateAdditionalPrivateSubnets != nil {
 		createAdditionalPrivateSubnets = *args.CreateAdditionalPrivateSubnets
 	}
+
+	var privateSubnetIds []pulumi.StringOutput
+	var publicSubnetIds []pulumi.StringOutput
+	var natGatewayIPs []pulumi.StringOutput
 	for i, az := range args.AvailabilityZoneConfig {
 		var natGateway *ec2.NatGateway
 		if createPublicSubnets && az.PublicSubnetCidr != "" && az.AvailabilityZone != "" {
@@ -211,14 +221,14 @@ func NewVpc(ctx *pulumi.Context,
 				VpcId:            vpc.ID(),
 				CidrBlock:        pulumi.String(az.PublicSubnetCidr),
 				AvailabilityZone: pulumi.String(az.AvailabilityZone),
-			})
+			}, pulumi.Parent(component))
 			if publicSubnetErr != nil {
 				return nil, publicSubnetErr
 			}
 
 			publicRouteTable, publicRouteTableErr := ec2.NewRouteTable(ctx, fmt.Sprintf("%s-public-route-table-%d", name, i), &ec2.RouteTableArgs{
 				VpcId: vpc.ID(),
-			})
+			}, pulumi.Parent(component))
 			if publicRouteTableErr != nil {
 				return nil, publicRouteTableErr
 			}
@@ -227,7 +237,7 @@ func NewVpc(ctx *pulumi.Context,
 				RouteTableId:         publicRouteTable.ID(),
 				DestinationCidrBlock: pulumi.String("0.0.0.0/0"),
 				GatewayId:            internetGateway.ID(),
-			})
+			}, pulumi.Parent(component))
 			if publicRouteErr != nil {
 				return nil, publicRouteErr
 			}
@@ -235,7 +245,7 @@ func NewVpc(ctx *pulumi.Context,
 			_, publicRouteTableAssociationErr := ec2.NewRouteTableAssociation(ctx, fmt.Sprintf("%s-public-route-table-association-%d", name, i), &ec2.RouteTableAssociationArgs{
 				SubnetId:     publicSubnet.ID(),
 				RouteTableId: publicRouteTable.ID(),
-			})
+			}, pulumi.Parent(component))
 			if publicRouteTableAssociationErr != nil {
 				return nil, publicRouteErr
 			}
@@ -243,7 +253,7 @@ func NewVpc(ctx *pulumi.Context,
 			if createNatGateways {
 				elasticIp, elasticIpErr := ec2.NewEip(ctx, fmt.Sprintf("%s-elastic-ip-%d", name, i), &ec2.EipArgs{
 					Vpc: pulumi.Bool(true),
-				})
+				}, pulumi.Parent(component))
 				if elasticIpErr != nil {
 					return nil, elasticIpErr
 				}
@@ -251,13 +261,16 @@ func NewVpc(ctx *pulumi.Context,
 				natGateway, natGatewayErr := ec2.NewNatGateway(ctx, fmt.Sprintf("%s-nat-gateway-%d", name, i), &ec2.NatGatewayArgs{
 					AllocationId: elasticIp.ID(),
 					SubnetId:     publicSubnet.ID(),
-				})
+				}, pulumi.Parent(component))
 				if natGatewayErr != nil {
 					return nil, elasticIpErr
 				}
 
 				natGateway = natGateway
+				natGatewayIPs = append(natGatewayIPs, elasticIp.PublicIp)
 			}
+
+			publicSubnetIds = append(publicSubnetIds, publicSubnet.ID().ToStringOutput())
 		}
 
 		if createPrivateSubnets && az.AvailabilityZone != "" && az.PrivateSubnetACidr != "" {
@@ -265,14 +278,14 @@ func NewVpc(ctx *pulumi.Context,
 				VpcId:            vpc.ID(),
 				CidrBlock:        pulumi.String(az.PrivateSubnetACidr),
 				AvailabilityZone: pulumi.String(az.AvailabilityZone),
-			})
+			}, pulumi.Parent(component))
 			if privateSubnetErr != nil {
 				return nil, privateSubnetErr
 			}
 
 			privateRouteTable, privateRouteTableErr := ec2.NewRouteTable(ctx, fmt.Sprintf("%s-private-route-table-%d", name, i), &ec2.RouteTableArgs{
 				VpcId: vpc.ID(),
-			})
+			}, pulumi.Parent(component))
 			if privateRouteTableErr != nil {
 				return nil, privateRouteTableErr
 			}
@@ -281,7 +294,7 @@ func NewVpc(ctx *pulumi.Context,
 				RouteTableId:         privateRouteTable.ID(),
 				DestinationCidrBlock: pulumi.String("0.0.0.0/0"),
 				NatGatewayId:         natGateway.ID(),
-			})
+			}, pulumi.Parent(component))
 			if privateRouteErr != nil {
 				return nil, privateRouteErr
 			}
@@ -289,10 +302,12 @@ func NewVpc(ctx *pulumi.Context,
 			_, privateRouteTableAssociationErr := ec2.NewRouteTableAssociation(ctx, fmt.Sprintf("%s-private-route-table-association-%d", name, i), &ec2.RouteTableAssociationArgs{
 				SubnetId:     privateSubnet.ID(),
 				RouteTableId: privateRouteTable.ID(),
-			})
+			}, pulumi.Parent(component))
 			if privateRouteTableAssociationErr != nil {
 				return nil, privateRouteTableAssociationErr
 			}
+
+			privateSubnetIds = append(publicSubnetIds, privateSubnet.ID().ToStringOutput())
 		}
 
 		if createAdditionalPrivateSubnets && az.AvailabilityZone != "" && az.PrivateSubnetBCidr != "" {
@@ -300,7 +315,7 @@ func NewVpc(ctx *pulumi.Context,
 				VpcId:            vpc.ID(),
 				CidrBlock:        pulumi.String(az.PrivateSubnetACidr),
 				AvailabilityZone: pulumi.String(az.AvailabilityZone),
-			})
+			}, pulumi.Parent(component))
 			if privateSubnetErr != nil {
 				return nil, privateSubnetErr
 			}
@@ -328,15 +343,25 @@ func NewVpc(ctx *pulumi.Context,
 						ToPort:    pulumi.Int(0),
 					},
 				},
-			})
-
+			}, pulumi.Parent(component))
 			if privateNetworkAclErr != nil {
 				return nil, privateNetworkAclErr
 			}
+			privateSubnetIds = append(publicSubnetIds, privateSubnet.ID().ToStringOutput())
 		}
 	}
 
-	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{}); err != nil {
+	component.VpcID = vpc.ID().ToStringOutput()
+	component.PrivateSubnetIDs = pulumi.ToStringArrayOutput(privateSubnetIds)
+	component.PublicSubnetIDs = pulumi.ToStringArrayOutput(publicSubnetIds)
+	component.NatGatewayIPs = pulumi.ToStringArrayOutput(natGatewayIPs)
+
+	if err := ctx.RegisterResourceOutputs(component, pulumi.Map{
+		"vpcID":            component.VpcID,
+		"privateSubnetIDs": component.PrivateSubnetIDs,
+		"publicSubnetIDs":  component.PublicSubnetIDs,
+		"natGatewayIPs":    component.NatGatewayIPs,
+	}); err != nil {
 		return nil, err
 	}
 

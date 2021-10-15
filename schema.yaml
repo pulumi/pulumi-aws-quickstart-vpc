@@ -119,6 +119,31 @@ resources:
                     The list of Configurations in which to create subnets. You can specify availability
                     zone with a private or a public subnet cidr block. You can also associated a private
                     subnet with a dedicated network ACL.
+        properties:
+            publicSubnetIDs:
+                type: array
+                items:
+                    type: string
+                description: |
+                    The IDs of the Public Subnets Created
+            privateSubnetIDs:
+                type: array
+                items:
+                    type: string
+                description: |
+                    The IDs of the Private Subnets Created
+            natGatewayIPs:
+                type: array
+                items:
+                    type: string
+                description: |
+                    The IPs of the EIPs associated with the Nat Gateways
+            vpcID:
+                type: string
+                description: |
+                    The VPC ID
+        required:
+            - vpcID
         requiredInputs:
             - cidrBlock
             - availabilityZoneConfig

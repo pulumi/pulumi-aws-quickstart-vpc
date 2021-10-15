@@ -13,6 +13,31 @@ namespace Pulumi.AwsQuickStartVpc
     public partial class Vpc : Pulumi.ComponentResource
     {
         /// <summary>
+        /// The IPs of the EIPs associated with the Nat Gateways
+        /// </summary>
+        [Output("natGatewayIPs")]
+        public Output<ImmutableArray<string>> NatGatewayIPs { get; private set; } = null!;
+
+        /// <summary>
+        /// The IDs of the Private Subnets Created
+        /// </summary>
+        [Output("privateSubnetIDs")]
+        public Output<ImmutableArray<string>> PrivateSubnetIDs { get; private set; } = null!;
+
+        /// <summary>
+        /// The IDs of the Public Subnets Created
+        /// </summary>
+        [Output("publicSubnetIDs")]
+        public Output<ImmutableArray<string>> PublicSubnetIDs { get; private set; } = null!;
+
+        /// <summary>
+        /// The VPC ID
+        /// </summary>
+        [Output("vpcID")]
+        public Output<string> VpcID { get; private set; } = null!;
+
+
+        /// <summary>
         /// Create a Vpc resource with the given unique name, arguments, and options.
         /// </summary>
         ///

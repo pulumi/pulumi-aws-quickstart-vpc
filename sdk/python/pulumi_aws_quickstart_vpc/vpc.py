@@ -382,10 +382,46 @@ class Vpc(pulumi.ComponentResource):
             __props__.__dict__["flow_logs_retention_period_in_days"] = flow_logs_retention_period_in_days
             __props__.__dict__["flow_logs_traffic_type"] = flow_logs_traffic_type
             __props__.__dict__["instance_tenancy"] = instance_tenancy
+            __props__.__dict__["nat_gateway_ips"] = None
+            __props__.__dict__["private_subnet_ids"] = None
+            __props__.__dict__["public_subnet_ids"] = None
+            __props__.__dict__["vpc_id"] = None
         super(Vpc, __self__).__init__(
             'aws-quickstart-vpc:index:Vpc',
             resource_name,
             __props__,
             opts,
             remote=True)
+
+    @property
+    @pulumi.getter(name="natGatewayIPs")
+    def nat_gateway_ips(self) -> pulumi.Output[Optional[Sequence[str]]]:
+        """
+        The IPs of the EIPs associated with the Nat Gateways
+        """
+        return pulumi.get(self, "nat_gateway_ips")
+
+    @property
+    @pulumi.getter(name="privateSubnetIDs")
+    def private_subnet_ids(self) -> pulumi.Output[Optional[Sequence[str]]]:
+        """
+        The IDs of the Private Subnets Created
+        """
+        return pulumi.get(self, "private_subnet_ids")
+
+    @property
+    @pulumi.getter(name="publicSubnetIDs")
+    def public_subnet_ids(self) -> pulumi.Output[Optional[Sequence[str]]]:
+        """
+        The IDs of the Public Subnets Created
+        """
+        return pulumi.get(self, "public_subnet_ids")
+
+    @property
+    @pulumi.getter(name="vpcID")
+    def vpc_id(self) -> pulumi.Output[str]:
+        """
+        The VPC ID
+        """
+        return pulumi.get(self, "vpc_id")
 

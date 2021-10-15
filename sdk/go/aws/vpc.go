@@ -13,6 +13,15 @@ import (
 
 type Vpc struct {
 	pulumi.ResourceState
+
+	// The IPs of the EIPs associated with the Nat Gateways
+	NatGatewayIPs pulumi.StringArrayOutput `pulumi:"natGatewayIPs"`
+	// The IDs of the Private Subnets Created
+	PrivateSubnetIDs pulumi.StringArrayOutput `pulumi:"privateSubnetIDs"`
+	// The IDs of the Public Subnets Created
+	PublicSubnetIDs pulumi.StringArrayOutput `pulumi:"publicSubnetIDs"`
+	// The VPC ID
+	VpcID pulumi.StringOutput `pulumi:"vpcID"`
 }
 
 // NewVpc registers a new resource with the given unique name, arguments, and options.
