@@ -1,0 +1,12 @@
+{
+    "name": "simple-typescript",
+    "devDependencies": {
+        "@types/node": "^14"
+    },
+    "dependencies": {
+        "@pulumi/aws": "^4.0.0",
+        "@pulumi/aws-quickstart-vpc": "^0.0.2",
+        "@pulumi/awsx": "^0.30.0",
+        "@pulumi/pulumi": "^3.0.0"
+    }
+}

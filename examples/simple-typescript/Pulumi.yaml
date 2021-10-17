@@ -1,0 +1,5 @@
+name: simple-typescript
+runtime: nodejs
+description: A minimal AWS Typescript Pulumi program that deploys a VPC with multiple
+  public and private subnets
+region: us-west-2

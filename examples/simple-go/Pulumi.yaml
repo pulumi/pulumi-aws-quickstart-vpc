@@ -1,0 +1,3 @@
+name: simple-go
+runtime: go
+description: A minimal program that deploys an AWS Go module
