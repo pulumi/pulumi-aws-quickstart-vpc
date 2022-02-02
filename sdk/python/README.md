@@ -1,1 +1,1 @@
-# pulumi-aws-quickstart-redshift
+# pulumi-aws-quickstart-vpc
