@@ -45,7 +45,7 @@ export class Vpc extends pulumi.ComponentResource {
      * @param opts A bag of options that control this resource's behavior.
      */
     constructor(name: string, args: VpcArgs, opts?: pulumi.ComponentResourceOptions) {
-        let inputs: pulumi.Inputs = {};
+        let resourceInputs: pulumi.Inputs = {};
         opts = opts || {};
         if (!opts.id) {
             if ((!args || args.availabilityZoneConfig === undefined) && !opts.urn) {
@@ -54,34 +54,32 @@ export class Vpc extends pulumi.ComponentResource {
             if ((!args || args.cidrBlock === undefined) && !opts.urn) {
                 throw new Error("Missing required property 'cidrBlock'");
             }
-            inputs["availabilityZoneConfig"] = args ? args.availabilityZoneConfig : undefined;
-            inputs["cidrBlock"] = args ? args.cidrBlock : undefined;
-            inputs["createAdditionalPrivateSubnets"] = args ? args.createAdditionalPrivateSubnets : undefined;
-            inputs["createFlowLogs"] = args ? args.createFlowLogs : undefined;
-            inputs["createNatGateways"] = args ? args.createNatGateways : undefined;
-            inputs["createPrivateSubnets"] = args ? args.createPrivateSubnets : undefined;
-            inputs["createPublicSubnets"] = args ? args.createPublicSubnets : undefined;
-            inputs["enableDnsHostnames"] = args ? args.enableDnsHostnames : undefined;
-            inputs["enableDnsSupport"] = args ? args.enableDnsSupport : undefined;
-            inputs["flowLogsLogFormat"] = args ? args.flowLogsLogFormat : undefined;
-            inputs["flowLogsMaxAggregationInterval"] = args ? args.flowLogsMaxAggregationInterval : undefined;
-            inputs["flowLogsRetentionPeriodInDays"] = args ? args.flowLogsRetentionPeriodInDays : undefined;
-            inputs["flowLogsTrafficType"] = args ? args.flowLogsTrafficType : undefined;
-            inputs["instanceTenancy"] = args ? args.instanceTenancy : undefined;
-            inputs["natGatewayIPs"] = undefined /*out*/;
-            inputs["privateSubnetIDs"] = undefined /*out*/;
-            inputs["publicSubnetIDs"] = undefined /*out*/;
-            inputs["vpcID"] = undefined /*out*/;
+            resourceInputs["availabilityZoneConfig"] = args ? args.availabilityZoneConfig : undefined;
+            resourceInputs["cidrBlock"] = args ? args.cidrBlock : undefined;
+            resourceInputs["createAdditionalPrivateSubnets"] = args ? args.createAdditionalPrivateSubnets : undefined;
+            resourceInputs["createFlowLogs"] = args ? args.createFlowLogs : undefined;
+            resourceInputs["createNatGateways"] = args ? args.createNatGateways : undefined;
+            resourceInputs["createPrivateSubnets"] = args ? args.createPrivateSubnets : undefined;
+            resourceInputs["createPublicSubnets"] = args ? args.createPublicSubnets : undefined;
+            resourceInputs["enableDnsHostnames"] = args ? args.enableDnsHostnames : undefined;
+            resourceInputs["enableDnsSupport"] = args ? args.enableDnsSupport : undefined;
+            resourceInputs["flowLogsLogFormat"] = args ? args.flowLogsLogFormat : undefined;
+            resourceInputs["flowLogsMaxAggregationInterval"] = args ? args.flowLogsMaxAggregationInterval : undefined;
+            resourceInputs["flowLogsRetentionPeriodInDays"] = args ? args.flowLogsRetentionPeriodInDays : undefined;
+            resourceInputs["flowLogsTrafficType"] = args ? args.flowLogsTrafficType : undefined;
+            resourceInputs["instanceTenancy"] = args ? args.instanceTenancy : undefined;
+            resourceInputs["natGatewayIPs"] = undefined /*out*/;
+            resourceInputs["privateSubnetIDs"] = undefined /*out*/;
+            resourceInputs["publicSubnetIDs"] = undefined /*out*/;
+            resourceInputs["vpcID"] = undefined /*out*/;
         } else {
-            inputs["natGatewayIPs"] = undefined /*out*/;
-            inputs["privateSubnetIDs"] = undefined /*out*/;
-            inputs["publicSubnetIDs"] = undefined /*out*/;
-            inputs["vpcID"] = undefined /*out*/;
+            resourceInputs["natGatewayIPs"] = undefined /*out*/;
+            resourceInputs["privateSubnetIDs"] = undefined /*out*/;
+            resourceInputs["publicSubnetIDs"] = undefined /*out*/;
+            resourceInputs["vpcID"] = undefined /*out*/;
         }
-        if (!opts.version) {
-            opts = pulumi.mergeOptions(opts, { version: utilities.getVersion()});
-        }
-        super(Vpc.__pulumiType, name, inputs, opts, true /*remote*/);
+        opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
+        super(Vpc.__pulumiType, name, resourceInputs, opts, true /*remote*/);
     }
 }
 
