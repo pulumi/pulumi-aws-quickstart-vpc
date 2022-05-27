@@ -48,6 +48,7 @@ setup(name='pulumi_aws_quickstart_vpc',
       package_data={
           'pulumi_aws_quickstart_vpc': [
               'py.typed',
+              'pulumi-plugin.json',
           ]
       },
       install_requires=[
