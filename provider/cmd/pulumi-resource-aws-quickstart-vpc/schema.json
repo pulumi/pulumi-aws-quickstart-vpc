@@ -1,0 +1,182 @@
+{
+	"name": "aws-quickstart-vpc",
+	"version": "0.0.3+dirty",
+	"language": {
+		"csharp": {
+			"namespaces": {
+				"aws-quickstart-vpc": "AwsQuickStartVpc"
+			},
+			"packageReferences": {
+				"Pulumi": "3.*",
+				"Pulumi.Aws": "4.*"
+			}
+		},
+		"go": {
+			"generateExtraInputTypes": true,
+			"generateResourceContainerTypes": true,
+			"importBasePath": "github.com/pulumi/pulumi-aws-quickstart-vpc/sdk/go/aws"
+		},
+		"nodejs": {
+			"dependencies": {
+				"@pulumi/aws": "^4.5.1"
+			},
+			"devDependencies": {
+				"typescript": "^3.7.0"
+			}
+		},
+		"python": {
+			"requires": {
+				"pulumi": "\u003e=3.0.0,\u003c4.0.0",
+				"pulumi-aws": "\u003e=4.0.0,\u003c5.0.0"
+			}
+		}
+	},
+	"config": {},
+	"types": {
+		"aws-quickstart-vpc:index:AvailabilityZone": {
+			"description": "The list of Configurations in which to create subnets. You can specify availability\nzone with a private or a public subnet cidr block. You can also associated a private\nsubnet with a dedicated network ACL.\n",
+			"properties": {
+				"availabilityZone": {
+					"type": "string",
+					"plain": true,
+					"description": "The availability zone name to deploy the subnet into\n"
+				},
+				"privateSubnetACidr": {
+					"type": "string",
+					"plain": true,
+					"description": "CIDR block for a private subnet located in the specified availability zone\n"
+				},
+				"privateSubnetBCidr": {
+					"type": "string",
+					"plain": true,
+					"description": "CIDR block for the associated private subnet (2) with a dedicated network ACL located in the specified availability zone. This subnet\nwill only be created if `CreateAdditionalPrivateSubnets` is `true`.\n"
+				},
+				"publicSubnetCidr": {
+					"type": "string",
+					"plain": true,
+					"description": "CIDR block for the public subnet located in the specified availability zone\n"
+				}
+			},
+			"type": "object",
+			"required": [
+				"availabilityZone"
+			]
+		}
+	},
+	"provider": {},
+	"resources": {
+		"aws-quickstart-vpc:index:Vpc": {
+			"properties": {
+				"natGatewayIPs": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The IPs of the EIPs associated with the Nat Gateways\n"
+				},
+				"privateSubnetIDs": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The IDs of the Private Subnets Created\n"
+				},
+				"publicSubnetIDs": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The IDs of the Public Subnets Created\n"
+				},
+				"vpcID": {
+					"type": "string",
+					"description": "The VPC ID\n"
+				}
+			},
+			"required": [
+				"vpcID"
+			],
+			"inputProperties": {
+				"availabilityZoneConfig": {
+					"type": "array",
+					"items": {
+						"$ref": "#/types/aws-quickstart-vpc:index:AvailabilityZone",
+						"plain": true
+					},
+					"plain": true,
+					"description": "The list of Configurations in which to create subnets. You can specify availability\nzone with a private or a public subnet cidr block. You can also associated a private\nsubnet with a dedicated network ACL.\n"
+				},
+				"cidrBlock": {
+					"type": "string",
+					"plain": true,
+					"description": "CIDR block for the VPC\n"
+				},
+				"createAdditionalPrivateSubnets": {
+					"type": "boolean",
+					"plain": true,
+					"description": "Set to `true` to create a network ACL protected subnet in each Availability Zone. If `false`, the CIDR parameters for those subnets will be ignored.\nIf `true`, it also requires that the 'Create private subnets' parameter is also `true` to have any effect.\nDefault is `true`\n"
+				},
+				"createFlowLogs": {
+					"type": "boolean",
+					"plain": true,
+					"description": "Enable Flow Logs to capture IP traffic for the VPC. Defaults to `true`\n"
+				},
+				"createNatGateways": {
+					"type": "boolean",
+					"plain": true,
+					"description": "Set to `false` when creating only private subnets. If `true`, both CreatePublicSubnets and CreatePrivateSubnets must also be `true`.\nDefault is `true`\n"
+				},
+				"createPrivateSubnets": {
+					"type": "boolean",
+					"plain": true,
+					"description": "Set to `false` to create only public subnets. If `false`, the CIDR parameters for ALL private subnets will be ignored.\nDefault is `true`.\n"
+				},
+				"createPublicSubnets": {
+					"type": "boolean",
+					"plain": true,
+					"description": "Set to `false` to create only private subnets. If `false`, CreatePrivateSubnets must be `true` and the CIDR parameters for ALL public subnets will be\nignored. Default is `true`\n"
+				},
+				"enableDnsHostnames": {
+					"type": "boolean",
+					"plain": true,
+					"description": "A boolean flag to enable/disable DNS hostnames in the VPC. Defaults `false`.\n"
+				},
+				"enableDnsSupport": {
+					"type": "boolean",
+					"plain": true,
+					"description": "A boolean flag to enable/disable DNS support in the VPC. Defaults true.\n"
+				},
+				"flowLogsLogFormat": {
+					"type": "string",
+					"plain": true,
+					"description": "The fields to include in the flow log record, in the order in which they should appear. Specify the fields using the ${field-id} format,\nseparated by spaces. Default is\n`${version} ${account-id} ${interface-id} ${srcaddr} ${dstaddr} ${srcport} ${dstport} ${protocol} ${packets} ${bytes} ${start} ${end} ${action} ${log-status}`\n"
+				},
+				"flowLogsMaxAggregationInterval": {
+					"type": "number",
+					"plain": true,
+					"description": "The maximum interval of time during which a flow of packets is captured and aggregated into a flow log record. You can specify 60 seconds\n(1 minute) or 600 seconds (10 minutes). Default is `600`\n"
+				},
+				"flowLogsRetentionPeriodInDays": {
+					"type": "number",
+					"plain": true,
+					"description": "Number of days to retain the VPC Flow Logs in CloudWatch. Defaults to `14`.\n"
+				},
+				"flowLogsTrafficType": {
+					"type": "string",
+					"plain": true,
+					"description": "The type of traffic to log. You can log traffic that the resource accepts or rejects, or all traffic.\nDefault is `REJECT`.\n"
+				},
+				"instanceTenancy": {
+					"type": "string",
+					"plain": true,
+					"description": "The allowed tenancy of instances launched into the VPC. Defaults to `default`.\n"
+				}
+			},
+			"requiredInputs": [
+				"cidrBlock",
+				"availabilityZoneConfig"
+			],
+			"isComponent": true
+		}
+	}
+}

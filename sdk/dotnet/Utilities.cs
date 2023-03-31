@@ -74,7 +74,7 @@ namespace Pulumi.AwsQuickStartVpc
         }
     }
 
-    internal sealed class AwsQuickStartVpcResourceTypeAttribute : Pulumi.ResourceTypeAttribute
+    internal sealed class AwsQuickStartVpcResourceTypeAttribute : global::Pulumi.ResourceTypeAttribute
     {
         public AwsQuickStartVpcResourceTypeAttribute(string type) : base(type, Utilities.Version)
         {

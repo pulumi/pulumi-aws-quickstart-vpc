@@ -15,7 +15,7 @@ namespace Pulumi.AwsQuickStartVpc.Inputs
     /// zone with a private or a public subnet cidr block. You can also associated a private
     /// subnet with a dedicated network ACL.
     /// </summary>
-    public sealed class AvailabilityZoneArgs : Pulumi.ResourceArgs
+    public sealed class AvailabilityZoneArgs : global::Pulumi.ResourceArgs
     {
         /// <summary>
         /// The availability zone name to deploy the subnet into
@@ -45,5 +45,6 @@ namespace Pulumi.AwsQuickStartVpc.Inputs
         public AvailabilityZoneArgs()
         {
         }
+        public static new AvailabilityZoneArgs Empty => new AvailabilityZoneArgs();
     }
 }

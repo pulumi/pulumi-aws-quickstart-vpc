@@ -16,12 +16,12 @@ func main() {
 		_, err := quickstartVpc.NewVpc(ctx, "simple-vpc", &quickstartVpc.VpcArgs{
 			CidrBlock: "10.0.0.0/16",
 			AvailabilityZoneConfig: []quickstartVpc.AvailabilityZoneArgs{
-				quickstartVpc.AvailabilityZoneArgs{
+				{
 					AvailabilityZone:   "us-east-1a",
 					PublicSubnetCidr:   &publicSubnet1Cidr,
 					PrivateSubnetACidr: &privateSubnet1ACidr,
 				},
-				quickstartVpc.AvailabilityZoneArgs{
+				{
 					AvailabilityZone: "us-east-1b",
 					PublicSubnetCidr: &publicSubnet2Cidr,
 				},

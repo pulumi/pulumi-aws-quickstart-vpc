@@ -156,6 +156,7 @@ language:
             aws-quickstart-vpc: AwsQuickStartVpc
     go:
         generateResourceContainerTypes: true
+        generateExtraInputTypes: true
         importBasePath: github.com/pulumi/pulumi-aws-quickstart-vpc/sdk/go/aws
     nodejs:
         dependencies:

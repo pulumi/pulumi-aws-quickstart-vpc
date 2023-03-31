@@ -17,11 +17,16 @@
 package main
 
 import (
+	_ "embed"
+
 	"github.com/pulumi/pulumi-aws-quickstart-vpc/provider/pkg/provider"
 	"github.com/pulumi/pulumi-aws-quickstart-vpc/provider/pkg/version"
 )
 
 var providerName = "aws-quickstart-vpc"
+
+//go:embed schema.json
+var pulumiSchema []byte
 
 func main() {
 	provider.Serve(providerName, version.Version, pulumiSchema)

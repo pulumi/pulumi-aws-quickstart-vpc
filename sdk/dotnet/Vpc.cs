@@ -10,7 +10,7 @@ using Pulumi.Serialization;
 namespace Pulumi.AwsQuickStartVpc
 {
     [AwsQuickStartVpcResourceType("aws-quickstart-vpc:index:Vpc")]
-    public partial class Vpc : Pulumi.ComponentResource
+    public partial class Vpc : global::Pulumi.ComponentResource
     {
         /// <summary>
         /// The IPs of the EIPs associated with the Nat Gateways
@@ -62,7 +62,7 @@ namespace Pulumi.AwsQuickStartVpc
         }
     }
 
-    public sealed class VpcArgs : Pulumi.ResourceArgs
+    public sealed class VpcArgs : global::Pulumi.ResourceArgs
     {
         [Input("availabilityZoneConfig", required: true)]
         private List<Inputs.AvailabilityZoneArgs>? _availabilityZoneConfig;
@@ -168,5 +168,6 @@ namespace Pulumi.AwsQuickStartVpc
         public VpcArgs()
         {
         }
+        public static new VpcArgs Empty => new VpcArgs();
     }
 }

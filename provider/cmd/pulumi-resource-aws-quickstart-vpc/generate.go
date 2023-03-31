@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build ignore
 // +build ignore
 
 package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -58,14 +58,12 @@ func main() {
 	}
 
 	packageSpec.Version = version
-	versionedContents, err := json.Marshal(packageSpec)
+	versionedContents, err := json.MarshalIndent(packageSpec, "", "\t")
 	if err != nil {
 		log.Fatalf("cannot reserialize schema: %v", err)
 	}
 
-	err = ioutil.WriteFile("./schema.go", []byte(fmt.Sprintf(`package main
-var pulumiSchema = %#v
-`, versionedContents)), 0600)
+	err = ioutil.WriteFile("./schema.json", versionedContents, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

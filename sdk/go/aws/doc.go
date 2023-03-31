@@ -1,3 +1,2 @@
-// Package aws-quickstart-vpc exports types, functions, subpackages for provisioning aws-quickstart-vpc resources.
-//
+// Package aws exports types, functions, subpackages for provisioning aws resources.
 package aws
